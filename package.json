@@ -1,0 +1,33 @@
+{
+  "name": "box-office-block-builder",
+  "version": "1.0.0",
+  "description": "Grabs box office results and builds Slack blocks for you to post to a channel.",
+  "main": "scrape.js",
+  "dependencies": {
+    "ansi-colors": "^4.1.3",
+    "axios": "^1.7.7",
+    "cheerio": "^1.0.0",
+    "copy-paste": "^1.5.3",
+    "csv": "^6.3.10",
+    "luxon": "^3.5",
+    "prompt-sync": "^4.2.0"
+  },
+  "scripts": {
+    "test": "node scrape.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/curtisgibby/box-office-block-builder.git"
+  },
+  "keywords": [
+    "movies",
+    "box office",
+    "slack"
+  ],
+  "author": "Curtis Gibby",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/curtisgibby/box-office-block-builder/issues"
+  },
+  "homepage": "https://github.com/curtisgibby/box-office-block-builder#readme"
+}
