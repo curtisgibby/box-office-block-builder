@@ -128,6 +128,6 @@ async function promptForMovieData(boxOfficeWinner) {
 
 function saveNewMovieToCsv(movie) {
 	const headers = ['title', 'imdb_id', 'image_url'];
-	const csv = headers.map((header) => movie[header]).join(',');
+	const csv = headers.map((header) => movie[header]).join(',') + '\n';
 	fs.appendFileSync(MOVIES_CSV_PATH, csv);
 }
