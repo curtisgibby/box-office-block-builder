@@ -11,7 +11,7 @@ const MOVIES_CSV_PATH = path.join(process.cwd(), 'movies.csv');
  
 const sunday = DateTime.now().minus({ weeks: 1}).endOf('week');
 const friday = sunday.minus({ days: 2});
-const boxOfficeMojoUrl = `https://www.boxofficemojo.com/weekend/${sunday.year}W${sunday.weekNumber}/`;
+const boxOfficeMojoUrl = `https://www.boxofficemojo.com/weekend/${sunday.year}W${sunday.weekNumber.toString().padStart(2, '0')}/`;
 
 console.log(`Getting data from Box Office Mojo: ${boxOfficeMojoUrl}`);
 
