@@ -228,6 +228,81 @@ async function findMovieInTmdb(boxOfficeWinner) {
 	}
 }
 
+async function scrapeRottenTomatoesScores(rtUrl) {
+	if (!rtUrl) {
+		return null;
+	}
+	try {
+		const response = await axios.get(rtUrl, {
+			headers: {
+				// A basic User-Agent can help avoid some simplistic bot blocks
+				'User-Agent': 'box-office-block-builder/1.0',
+			},
+		});
+		const html = response.data;
+		const $ = cheerio.load(html);
+		
+		// Most relevant score elements live inside <media-scorecard>.
+		const scorecard = $('media-scorecard').first();
+		const scope = scorecard && scorecard.length ? scorecard : $.root();
+		
+		let tomatometerScore = null;
+		let tomatometerStatus = null;
+		let popcornmeterScore = null;
+		let popcornmeterStatus = null;
+		
+		// Preferred approach: use dedicated score-icon and rt-text elements.
+		const criticsIcon = scope.find('score-icon-critics').first();
+		if (criticsIcon && criticsIcon.length) {
+			const sentiment = (criticsIcon.attr('sentiment') || '').toUpperCase();
+			const certified = (criticsIcon.attr('certified') || '').toLowerCase() === 'true';
+			if (sentiment === 'NEGATIVE') {
+				tomatometerStatus = 'rotten';
+			} else if (sentiment === 'POSITIVE' && certified) {
+				tomatometerStatus = 'certified-fresh';
+			} else if (sentiment === 'POSITIVE') {
+				tomatometerStatus = 'fresh';
+			}
+		}
+		const criticsText = scope.find('rt-text[slot="criticsScore"], rt-text[slot^="criticsScore"]').first().text();
+		if (criticsText) {
+			const match = criticsText.match(/(\d+)/);
+			if (match) {
+				tomatometerScore = match[1];
+			}
+		}
+		
+		const audienceIcon = scope.find('score-icon-audience').first();
+		if (audienceIcon && audienceIcon.length) {
+			const sentiment = (audienceIcon.attr('sentiment') || '').toUpperCase();
+			const certified = (audienceIcon.attr('certified') || '').toLowerCase() === 'true';
+			if (sentiment === 'NEGATIVE') {
+				popcornmeterStatus = 'stale';
+			} else if (sentiment === 'POSITIVE' && certified) {
+				popcornmeterStatus = 'verified-hot';
+			} else if (sentiment === 'POSITIVE') {
+				popcornmeterStatus = 'hot';
+			}
+		}
+		const audienceText = scope.find('rt-text[slot="audienceScore"], rt-text[slot^="audienceScore"]').first().text();
+		if (audienceText) {
+			const match = audienceText.match(/(\d+)/);
+			if (match) {
+				popcornmeterScore = match[1];
+			}
+		}
+
+		return {
+			tomatometerScore: tomatometerScore || null,
+			tomatometerStatus: tomatometerStatus || null,
+			popcornmeterScore: popcornmeterScore || null,
+			popcornmeterStatus: popcornmeterStatus || null,
+		};
+	} catch (error) {
+		return null;
+	}
+}
+
 async function promptForMovieData(boxOfficeWinner) {
 	const imdbSearchUrl = `https://www.google.com/search?q=site%3Aimdb.com+${encodeURIComponent(boxOfficeWinner.title)}`;
 	const imageSearchUrl = `https://www.google.com/search?q=site%3Athemoviedb.org+${encodeURIComponent(boxOfficeWinner.title)}`;
@@ -251,16 +326,44 @@ async function promptForMovieData(boxOfficeWinner) {
 	}
 	const rtSearchUrl = `https://www.google.com/search?q=site%3Arottentomatoes.com+${encodeURIComponent(boxOfficeWinner.title)}`;
 	const rtUrl = prompt(`Enter the Rotten Tomatoes URL for ${boxOfficeWinner.title} (${rtSearchUrl}): `);
-	const tomatometerScore = prompt(`Enter the Rotten Tomatoes TOMATOMETER score (critics %) for ${boxOfficeWinner.title}: `);
-	const tomatometerStatus = promptForChoice(
-		`Select the Rotten Tomatoes TOMATOMETER status for ${boxOfficeWinner.title}:`,
-		['rotten', 'fresh', 'certified-fresh']
-	);
-	const popcornmeterScore = prompt(`Enter the Rotten Tomatoes POPCORNMETER score (audience %) for ${boxOfficeWinner.title}: `);
-	const popcornmeterStatus = promptForChoice(
-		`Select the Rotten Tomatoes POPCORNMETER status for ${boxOfficeWinner.title}:`,
-		['stale', 'hot', 'verified-hot']
-	);
+	let tomatometerScore;
+	let tomatometerStatus;
+	let popcornmeterScore;
+	let popcornmeterStatus;
+
+	const scrapedRt = await scrapeRottenTomatoesScores(rtUrl);
+	if (scrapedRt) {
+		if (scrapedRt.tomatometerScore) {
+			tomatometerScore = scrapedRt.tomatometerScore;
+		}
+		if (scrapedRt.tomatometerStatus) {
+			tomatometerStatus = scrapedRt.tomatometerStatus;
+		}
+		if (scrapedRt.popcornmeterScore) {
+			popcornmeterScore = scrapedRt.popcornmeterScore;
+		}
+		if (scrapedRt.popcornmeterStatus) {
+			popcornmeterStatus = scrapedRt.popcornmeterStatus;
+		}
+	}
+	if (!tomatometerScore) {
+		tomatometerScore = prompt(`Enter the Rotten Tomatoes TOMATOMETER score (critics %) for ${boxOfficeWinner.title}: `);
+	}
+	if (!tomatometerStatus) {
+		tomatometerStatus = promptForChoice(
+			`Select the Rotten Tomatoes TOMATOMETER status for ${boxOfficeWinner.title}:`,
+			['rotten', 'fresh', 'certified-fresh']
+		);
+	}
+	if (!popcornmeterScore) {
+		popcornmeterScore = prompt(`Enter the Rotten Tomatoes POPCORNMETER score (audience %) for ${boxOfficeWinner.title}: `);
+	}
+	if (!popcornmeterStatus) {
+		popcornmeterStatus = promptForChoice(
+			`Select the Rotten Tomatoes POPCORNMETER status for ${boxOfficeWinner.title}:`,
+			['stale', 'hot', 'verified-hot']
+		);
+	}
 	return {
 		title: boxOfficeWinner.title,
 		imdb_id: imdbId,
