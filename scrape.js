@@ -121,8 +121,10 @@ function getRankIcon(rank) {
 }
 
 async function promptForMovieData(boxOfficeWinner) {
-	const imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title}: `);
-	const imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title}: `);
+	const imdbSearchUrl = `https://www.google.com/search?q=site%3Aimdb.com+${encodeURIComponent(boxOfficeWinner.title)}`;
+	const imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title} (${imdbSearchUrl}): `);
+	const imageSearchUrl = `https://www.google.com/search?q=site%3Athemoviedb.org+${encodeURIComponent(boxOfficeWinner.title)}`;
+	const imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title} (${imageSearchUrl}): `);
 	return { title: boxOfficeWinner.title, imdb_id: imdbId, image_url: imageUrl };
 }
 
