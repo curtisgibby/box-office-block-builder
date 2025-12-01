@@ -50,7 +50,7 @@ function parseHtml(html) {
 function getMoviesFromCsv(boxOfficeWinners) {
 	const movies = [];
 	fs.createReadStream(MOVIES_CSV_PATH)
-		.pipe(parse({ columns: true }))
+		.pipe(parse({ columns: true, relax_column_count: true }))
 		.on("data", function (row) {
 			movies.push(row);
 		})
@@ -66,14 +66,32 @@ async function parseMovies(movies, boxOfficeWinners) {
 		if (!matchedMovie) {
 			matchedMovie = await promptForMovieData(boxOfficeWinner);
 			saveNewMovieToCsv(matchedMovie);
+			outputData.push({
+				title: boxOfficeWinner.title,
+				rank: boxOfficeWinner.rank,
+				gross: boxOfficeWinner.gross,
+				image_url: matchedMovie.image_url,
+				imdb_id: matchedMovie.imdb_id,
+				rt_url: matchedMovie.rt_url,
+				rt_tomatometer_score: matchedMovie.rt_tomatometer_score,
+				rt_tomatometer_status: matchedMovie.rt_tomatometer_status,
+				rt_popcornmeter_score: matchedMovie.rt_popcornmeter_score,
+				rt_popcornmeter_status: matchedMovie.rt_popcornmeter_status,
+			});
+		} else {
+			outputData.push({
+				title: boxOfficeWinner.title,
+				rank: boxOfficeWinner.rank,
+				gross: boxOfficeWinner.gross,
+				image_url: matchedMovie.image_url,
+				imdb_id: matchedMovie.imdb_id,
+				rt_url: matchedMovie.rt_url,
+				rt_tomatometer_score: matchedMovie.rt_tomatometer_score,
+				rt_tomatometer_status: matchedMovie.rt_tomatometer_status,
+				rt_popcornmeter_score: matchedMovie.rt_popcornmeter_score,
+				rt_popcornmeter_status: matchedMovie.rt_popcornmeter_status,
+			});
 		}
-		outputData.push({
-			title: boxOfficeWinner.title,
-			rank: boxOfficeWinner.rank,
-			gross: boxOfficeWinner.gross,
-			image_url: matchedMovie.image_url,
-			imdb_id: matchedMovie.imdb_id,
-		});
 	});
 	formatOutputDataForSlack(outputData);
 }
@@ -83,7 +101,7 @@ function formatOutputDataForSlack(outputData) {
 		type: 'section',
 		text: {
 			type: 'mrkdwn',
-			text: getRankIcon(movie.rank)+ ` <https://www.imdb.com/title/${movie.imdb_id}/|${movie.title}> _(${movie.gross})_`,
+			text: getRankIcon(movie.rank)+ ` <https://www.imdb.com/title/${movie.imdb_id}/|${movie.title}> _(${movie.gross})_` + getRottenTomatoesText(movie),
 		},
 		accessory: {
 			type: 'image',
@@ -120,16 +138,107 @@ function getRankIcon(rank) {
 	}
 }
 
+function getRottenTomatoesText(movie) {
+	if (!movie.rt_url) {
+		return '';
+	}
+
+	const parts = [];
+	if (movie.rt_tomatometer_status && movie.rt_tomatometer_score) {
+		const icon = getTomatometerIcon(movie.rt_tomatometer_status);
+		parts.push(`${icon} ${movie.rt_tomatometer_score}%`);
+	}
+	if (movie.rt_popcornmeter_status && movie.rt_popcornmeter_score) {
+		const icon = getPopcornmeterIcon(movie.rt_popcornmeter_status);
+		parts.push(`${icon} ${movie.rt_popcornmeter_score}%`);
+	}
+	if (parts.length === 0) {
+		return `\n<${movie.rt_url}|Rotten Tomatoes>`;
+	}
+	return `\n<${movie.rt_url}|${parts.join(' ')}>`;
+}
+
+function getTomatometerIcon(status) {
+	switch (status) {
+		case 'rotten':
+			return ':rotten-tomatoes-rotten-splat:';
+		case 'fresh':
+			return ':rotten-tomatoes-fresh-tomato:';
+		case 'certified-fresh':
+			return ':rotten-tomatoes-certified-fresh:';
+		default:
+			return '';
+	}
+}
+
+function getPopcornmeterIcon(status) {
+	switch (status) {
+		case 'stale':
+			return ':rotten-tomatoes-stale-popcorn:';
+		case 'hot':
+			return ':rotten-tomatoes-hot-popcorn:';
+		case 'verified-hot':
+			return ':rotten-tomatoes-verified-hot:';
+		default:
+			return '';
+	}
+}
+
+function promptForChoice(message, options) {
+	while (true) {
+		console.log(message);
+		options.forEach((option, index) => {
+			console.log(`${index + 1}) ${option}`);
+		});
+		const answer = prompt(`Enter 1-${options.length}: `);
+		const index = parseInt(answer, 10);
+		if (!Number.isNaN(index) && index >= 1 && index <= options.length) {
+			return options[index - 1];
+		}
+		console.log('Invalid choice, please try again.');
+	}
+}
+
 async function promptForMovieData(boxOfficeWinner) {
 	const imdbSearchUrl = `https://www.google.com/search?q=site%3Aimdb.com+${encodeURIComponent(boxOfficeWinner.title)}`;
 	const imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title} (${imdbSearchUrl}): `);
 	const imageSearchUrl = `https://www.google.com/search?q=site%3Athemoviedb.org+${encodeURIComponent(boxOfficeWinner.title)}`;
 	const imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title} (${imageSearchUrl}): `);
-	return { title: boxOfficeWinner.title, imdb_id: imdbId, image_url: imageUrl };
+	const rtSearchUrl = `https://www.google.com/search?q=site%3Arottentomatoes.com+${encodeURIComponent(boxOfficeWinner.title)}`;
+	const rtUrl = prompt(`Enter the Rotten Tomatoes URL for ${boxOfficeWinner.title} (${rtSearchUrl}): `);
+	const tomatometerScore = prompt(`Enter the Rotten Tomatoes TOMATOMETER score (critics %) for ${boxOfficeWinner.title}: `);
+	const tomatometerStatus = promptForChoice(
+		`Select the Rotten Tomatoes TOMATOMETER status for ${boxOfficeWinner.title}:`,
+		['rotten', 'fresh', 'certified-fresh']
+	);
+	const popcornmeterScore = prompt(`Enter the Rotten Tomatoes POPCORNMETER score (audience %) for ${boxOfficeWinner.title}: `);
+	const popcornmeterStatus = promptForChoice(
+		`Select the Rotten Tomatoes POPCORNMETER status for ${boxOfficeWinner.title}:`,
+		['stale', 'hot', 'verified-hot']
+	);
+	return {
+		title: boxOfficeWinner.title,
+		imdb_id: imdbId,
+		image_url: imageUrl,
+		rt_url: rtUrl,
+		rt_tomatometer_score: tomatometerScore,
+		rt_tomatometer_status: tomatometerStatus,
+		rt_popcornmeter_score: popcornmeterScore,
+		rt_popcornmeter_status: popcornmeterStatus,
+	};
 }
 
 function saveNewMovieToCsv(movie) {
-	const headers = ['title', 'imdb_id', 'image_url'];
+	const headers = [
+		'title',
+		'imdb_id',
+		'image_url',
+		'rt_url',
+		'rt_tomatometer_score',
+		'rt_tomatometer_status',
+		'rt_popcornmeter_score',
+		'rt_popcornmeter_status',
+	];
 	const csv = headers.map((header) => movie[header]).join(',') + '\n';
 	fs.appendFileSync(MOVIES_CSV_PATH, csv);
 }
