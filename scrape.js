@@ -7,8 +7,19 @@ const cheerio = require('cheerio')
 const { DateTime } = require('luxon');
 const ncp = require("copy-paste");
 const prompt = require('prompt-sync')();
+const { MovieDb } = require('moviedb-promise');
 const MOVIES_CSV_PATH = path.join(process.cwd(), 'movies.csv');
- 
+
+let moviedb = null;
+try {
+	const tmdbConfig = require('./tmdb-config.json');
+	if (tmdbConfig && tmdbConfig.apiKey) {
+		moviedb = new MovieDb(tmdbConfig.apiKey);
+	}
+} catch (error) {
+	console.log(c.yellow('Warning:'), c.white('TMDB integration disabled. Check tmdb-config.json and moviedb-promise installation.'));
+}
+
 const sunday = DateTime.now().minus({ weeks: 1}).endOf('week');
 const friday = sunday.minus({ days: 2});
 const boxOfficeMojoUrl = `https://www.boxofficemojo.com/weekend/${sunday.year}W${sunday.weekNumber.toString().padStart(2, '0')}/`;
@@ -61,38 +72,25 @@ function getMoviesFromCsv(boxOfficeWinners) {
 
 async function parseMovies(movies, boxOfficeWinners) {
 	const outputData = [];
-	boxOfficeWinners.forEach(async (boxOfficeWinner) => {
+	for (const boxOfficeWinner of boxOfficeWinners) {
 		let matchedMovie = movies.find((movie) => movie.title === boxOfficeWinner.title);
 		if (!matchedMovie) {
 			matchedMovie = await promptForMovieData(boxOfficeWinner);
 			saveNewMovieToCsv(matchedMovie);
-			outputData.push({
-				title: boxOfficeWinner.title,
-				rank: boxOfficeWinner.rank,
-				gross: boxOfficeWinner.gross,
-				image_url: matchedMovie.image_url,
-				imdb_id: matchedMovie.imdb_id,
-				rt_url: matchedMovie.rt_url,
-				rt_tomatometer_score: matchedMovie.rt_tomatometer_score,
-				rt_tomatometer_status: matchedMovie.rt_tomatometer_status,
-				rt_popcornmeter_score: matchedMovie.rt_popcornmeter_score,
-				rt_popcornmeter_status: matchedMovie.rt_popcornmeter_status,
-			});
-		} else {
-			outputData.push({
-				title: boxOfficeWinner.title,
-				rank: boxOfficeWinner.rank,
-				gross: boxOfficeWinner.gross,
-				image_url: matchedMovie.image_url,
-				imdb_id: matchedMovie.imdb_id,
-				rt_url: matchedMovie.rt_url,
-				rt_tomatometer_score: matchedMovie.rt_tomatometer_score,
-				rt_tomatometer_status: matchedMovie.rt_tomatometer_status,
-				rt_popcornmeter_score: matchedMovie.rt_popcornmeter_score,
-				rt_popcornmeter_status: matchedMovie.rt_popcornmeter_status,
-			});
 		}
-	});
+		outputData.push({
+			title: boxOfficeWinner.title,
+			rank: boxOfficeWinner.rank,
+			gross: boxOfficeWinner.gross,
+			image_url: matchedMovie.image_url,
+			imdb_id: matchedMovie.imdb_id,
+			rt_url: matchedMovie.rt_url,
+			rt_tomatometer_score: matchedMovie.rt_tomatometer_score,
+			rt_tomatometer_status: matchedMovie.rt_tomatometer_status,
+			rt_popcornmeter_score: matchedMovie.rt_popcornmeter_score,
+			rt_popcornmeter_status: matchedMovie.rt_popcornmeter_status,
+		});
+	}
 	formatOutputDataForSlack(outputData);
 }
 
@@ -199,11 +197,58 @@ function promptForChoice(message, options) {
 	}
 }
 
+async function findMovieInTmdb(boxOfficeWinner) {
+	if (!moviedb) {
+		return null;
+	}
+	try {
+		const searchResponse = await moviedb.searchMovie({ query: boxOfficeWinner.title });
+		const results = searchResponse && searchResponse.results ? searchResponse.results : [];
+		if (!results.length) {
+			return null;
+		}
+		let chosenMovie = null;
+		if (results.length === 1) {
+			chosenMovie = results[0];
+		} else {
+			const options = results.map((movie) => {
+				const releaseDate = movie.release_date || 'unknown release date';
+				return `${movie.title} (${releaseDate})`;
+			});
+			const selected = promptForChoice(`Select the matching movie for ${boxOfficeWinner.title}:`, options);
+			const selectedIndex = options.indexOf(selected);
+			chosenMovie = results[selectedIndex === -1 ? 0 : selectedIndex];
+		}
+		const externalIds = await moviedb.movieExternalIds({ id: chosenMovie.id });
+		const imdbId = externalIds && externalIds.imdb_id ? externalIds.imdb_id : null;
+		const imageUrl = chosenMovie.poster_path ? `https://image.tmdb.org/t/p/w92${chosenMovie.poster_path}` : null;
+		return { imdbId, imageUrl };
+	} catch (error) {
+		return null;
+	}
+}
+
 async function promptForMovieData(boxOfficeWinner) {
 	const imdbSearchUrl = `https://www.google.com/search?q=site%3Aimdb.com+${encodeURIComponent(boxOfficeWinner.title)}`;
-	const imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title} (${imdbSearchUrl}): `);
 	const imageSearchUrl = `https://www.google.com/search?q=site%3Athemoviedb.org+${encodeURIComponent(boxOfficeWinner.title)}`;
-	const imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title} (${imageSearchUrl}): `);
+	let imdbId;
+	let imageUrl;
+
+	const tmdbData = await findMovieInTmdb(boxOfficeWinner);
+	if (tmdbData) {
+		if (tmdbData.imdbId) {
+			imdbId = tmdbData.imdbId;
+		}
+		if (tmdbData.imageUrl) {
+			imageUrl = tmdbData.imageUrl;
+		}
+	}
+	if (!imdbId) {
+		imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title} (${imdbSearchUrl}): `);
+	}
+	if (!imageUrl) {
+		imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title} (${imageSearchUrl}): `);
+	}
 	const rtSearchUrl = `https://www.google.com/search?q=site%3Arottentomatoes.com+${encodeURIComponent(boxOfficeWinner.title)}`;
 	const rtUrl = prompt(`Enter the Rotten Tomatoes URL for ${boxOfficeWinner.title} (${rtSearchUrl}): `);
 	const tomatometerScore = prompt(`Enter the Rotten Tomatoes TOMATOMETER score (critics %) for ${boxOfficeWinner.title}: `);
