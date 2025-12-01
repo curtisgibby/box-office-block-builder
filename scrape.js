@@ -8,6 +8,7 @@ const { DateTime } = require('luxon');
 const ncp = require("copy-paste");
 const prompt = require('prompt-sync')();
 const { MovieDb } = require('moviedb-promise');
+const { spawn } = require('child_process');
 const MOVIES_CSV_PATH = path.join(process.cwd(), 'movies.csv');
 
 let moviedb = null;
@@ -197,6 +198,17 @@ function promptForChoice(message, options) {
 	}
 }
 
+function openUrlInBrowser(url) {
+	if (!url) {
+		return;
+	}
+	try {
+		const child = spawn('open', [url], { stdio: 'ignore', detached: true });
+		child.unref();
+	} catch (error) {
+	}
+}
+
 async function findMovieInTmdb(boxOfficeWinner) {
 	if (!moviedb) {
 		return null;
@@ -222,7 +234,8 @@ async function findMovieInTmdb(boxOfficeWinner) {
 		const externalIds = await moviedb.movieExternalIds({ id: chosenMovie.id });
 		const imdbId = externalIds && externalIds.imdb_id ? externalIds.imdb_id : null;
 		const imageUrl = chosenMovie.poster_path ? `https://image.tmdb.org/t/p/w92${chosenMovie.poster_path}` : null;
-		return { imdbId, imageUrl };
+		const releaseYear = chosenMovie.release_date ? chosenMovie.release_date.slice(0, 4) : null;
+		return { imdbId, imageUrl, releaseYear };
 	} catch (error) {
 		return null;
 	}
@@ -304,8 +317,6 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 }
 
 async function promptForMovieData(boxOfficeWinner) {
-	const imdbSearchUrl = `https://www.google.com/search?q=site%3Aimdb.com+${encodeURIComponent(boxOfficeWinner.title)}`;
-	const imageSearchUrl = `https://www.google.com/search?q=site%3Athemoviedb.org+${encodeURIComponent(boxOfficeWinner.title)}`;
 	let imdbId;
 	let imageUrl;
 
@@ -319,13 +330,30 @@ async function promptForMovieData(boxOfficeWinner) {
 		}
 	}
 	if (!imdbId) {
-		imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title} (${imdbSearchUrl}): `);
+		let query = `\\site:imdb.com ${boxOfficeWinner.title}`;
+		if (tmdbData && tmdbData.releaseYear) {
+			query += ` ${tmdbData.releaseYear}`;
+		}
+		const imdbSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+		openUrlInBrowser(imdbSearchUrl);
+		imdbId = prompt(`Enter the IMDB ID for ${boxOfficeWinner.title}: `);
 	}
 	if (!imageUrl) {
-		imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title} (${imageSearchUrl}): `);
+		let query = `\\site:themoviedb.org ${boxOfficeWinner.title}`;
+		if (tmdbData && tmdbData.releaseYear) {
+			query += ` ${tmdbData.releaseYear}`;
+		}
+		const imageSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
+		openUrlInBrowser(imageSearchUrl);
+		imageUrl = prompt(`Enter the image URL for ${boxOfficeWinner.title}: `);
 	}
-	const rtSearchUrl = `https://www.google.com/search?q=site%3Arottentomatoes.com+${encodeURIComponent(boxOfficeWinner.title)}`;
-	const rtUrl = prompt(`Enter the Rotten Tomatoes URL for ${boxOfficeWinner.title} (${rtSearchUrl}): `);
+	let rtQuery = `\\site:rottentomatoes.com ${boxOfficeWinner.title}`;
+	if (tmdbData && tmdbData.releaseYear) {
+		rtQuery += ` ${tmdbData.releaseYear}`;
+	}
+	const rtSearchUrl = `https://duckduckgo.com/?q=${encodeURIComponent(rtQuery)}`;
+	openUrlInBrowser(rtSearchUrl);
+	const rtUrl = prompt(`Enter the Rotten Tomatoes URL for ${boxOfficeWinner.title}: `);
 	let tomatometerScore;
 	let tomatometerStatus;
 	let popcornmeterScore;
