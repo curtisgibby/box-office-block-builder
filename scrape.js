@@ -188,7 +188,7 @@ function promptForChoice(message, options) {
 	while (true) {
 		console.log(message);
 		options.forEach((option, index) => {
-			console.log(`${index + 1}) ${option}`);
+			console.log(c.blue(`${index + 1}`) + ` ${option}`);
 		});
 		const answer = prompt(`Enter 1-${options.length}: `);
 		const index = parseInt(answer, 10);
