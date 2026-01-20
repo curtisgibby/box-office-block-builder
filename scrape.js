@@ -90,6 +90,7 @@ async function parseMovies(movies, boxOfficeWinners) {
 			rt_tomatometer_status: matchedMovie.rt_tomatometer_status,
 			rt_popcornmeter_score: matchedMovie.rt_popcornmeter_score,
 			rt_popcornmeter_status: matchedMovie.rt_popcornmeter_status,
+			weeks_in_release: calculateWeeksInRelease(matchedMovie.release_date, sunday),
 		});
 	}
 	formatOutputDataForSlack(outputData);
@@ -100,7 +101,7 @@ function formatOutputDataForSlack(outputData) {
 		type: 'section',
 		text: {
 			type: 'mrkdwn',
-			text: getRankIcon(movie.rank)+ ` <https://www.imdb.com/title/${movie.imdb_id}/|${movie.title}> _(${movie.gross})_` + getRottenTomatoesText(movie),
+			text: getRankIcon(movie.rank)+ ` <https://www.imdb.com/title/${movie.imdb_id}/|${movie.title}> _(${movie.gross})_` + getWeeksInReleaseText(movie.weeks_in_release) + getRottenTomatoesText(movie),
 		},
 		accessory: {
 			type: 'image',
@@ -183,6 +184,28 @@ function getPopcornmeterIcon(status) {
 	}
 }
 
+function calculateWeeksInRelease(releaseDate, weekendSunday) {
+	if (!releaseDate) {
+		return null;
+	}
+	const release = DateTime.fromISO(releaseDate);
+	if (!release.isValid) {
+		return null;
+	}
+	const daysSinceRelease = weekendSunday.diff(release, 'days').days;
+	if (daysSinceRelease < 0) {
+		return null; // Movie not yet released
+	}
+	return Math.floor(daysSinceRelease / 7) + 1;
+}
+
+function getWeeksInReleaseText(weeksInRelease) {
+	if (!weeksInRelease) {
+		return '';
+	}
+	return `\n· Week ${weeksInRelease}`;
+}
+
 function promptForChoice(message, options) {
 	while (true) {
 		console.log(message);
@@ -234,8 +257,9 @@ async function findMovieInTmdb(boxOfficeWinner) {
 		const externalIds = await moviedb.movieExternalIds({ id: chosenMovie.id });
 		const imdbId = externalIds && externalIds.imdb_id ? externalIds.imdb_id : null;
 		const imageUrl = chosenMovie.poster_path ? `https://image.tmdb.org/t/p/w92${chosenMovie.poster_path}` : null;
-		const releaseYear = chosenMovie.release_date ? chosenMovie.release_date.slice(0, 4) : null;
-		return { imdbId, imageUrl, releaseYear };
+		const releaseDate = chosenMovie.release_date || null;
+		const releaseYear = releaseDate ? releaseDate.slice(0, 4) : null;
+		return { imdbId, imageUrl, releaseDate, releaseYear };
 	} catch (error) {
 		return null;
 	}
@@ -319,6 +343,7 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 async function promptForMovieData(boxOfficeWinner) {
 	let imdbId;
 	let imageUrl;
+	let releaseDate;
 
 	const tmdbData = await findMovieInTmdb(boxOfficeWinner);
 	if (tmdbData) {
@@ -327,6 +352,9 @@ async function promptForMovieData(boxOfficeWinner) {
 		}
 		if (tmdbData.imageUrl) {
 			imageUrl = tmdbData.imageUrl;
+		}
+		if (tmdbData.releaseDate) {
+			releaseDate = tmdbData.releaseDate;
 		}
 	}
 	if (!imdbId) {
@@ -401,6 +429,7 @@ async function promptForMovieData(boxOfficeWinner) {
 		rt_tomatometer_status: tomatometerStatus,
 		rt_popcornmeter_score: popcornmeterScore,
 		rt_popcornmeter_status: popcornmeterStatus,
+		release_date: releaseDate,
 	};
 }
 
@@ -414,6 +443,7 @@ function saveNewMovieToCsv(movie) {
 		'rt_tomatometer_status',
 		'rt_popcornmeter_score',
 		'rt_popcornmeter_status',
+		'release_date',
 	];
 	const csv = headers.map((header) => movie[header]).join(',') + '\n';
 	fs.appendFileSync(MOVIES_CSV_PATH, csv);
