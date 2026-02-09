@@ -36,6 +36,31 @@ When `tmdb-config.json` is present and valid, the script will:
 
 If TMDB is not configured or a lookup fails, the script falls back to manual prompts for the IMDb ID and image URL.
 
+## Slack emoji
+
+The script uses custom Slack emoji for Rotten Tomatoes scores. To add them to your Slack workspace:
+
+1. Go to **Customize Workspace** > **Emoji** (or visit `https://<your-workspace>.slack.com/customize/emoji`).
+2. Click **Add Emoji** and upload each image from the `images/` directory, using the filename (without the `.png` extension) as the emoji name.
+
+### Critics (Tomatometer)
+
+| Status | Icon | Emoji name |
+|--------|------|------------|
+| Certified Fresh | ![Certified Fresh](images/rotten-tomatoes-certified-fresh.png) | `:rotten-tomatoes-certified-fresh:` |
+| Fresh | ![Fresh](images/rotten-tomatoes-fresh-tomato.png) | `:rotten-tomatoes-fresh-tomato:` |
+| Rotten | ![Rotten](images/rotten-tomatoes-rotten-splat.png) | `:rotten-tomatoes-rotten-splat:` |
+| Not enough reviews | ![Gray Tomato](images/rotten-tomatoes-gray-tomato.png) | `:rotten-tomatoes-gray-tomato:` |
+
+### Audience (Popcornmeter)
+
+| Status | Icon | Emoji name |
+|--------|------|------------|
+| Verified Hot | ![Verified Hot](images/rotten-tomatoes-verified-hot.png) | `:rotten-tomatoes-verified-hot:` |
+| Hot | ![Hot](images/rotten-tomatoes-hot-popcorn.png) | `:rotten-tomatoes-hot-popcorn:` |
+| Stale | ![Stale](images/rotten-tomatoes-stale-popcorn.png) | `:rotten-tomatoes-stale-popcorn:` |
+| Not enough reviews | ![Gray Popcorn](images/rotten-tomatoes-gray-popcorn.png) | `:rotten-tomatoes-gray-popcorn:` |
+
 ## Example output
 
 ```plain_text
