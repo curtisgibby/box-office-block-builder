@@ -146,11 +146,13 @@ function getRottenTomatoesText(movie) {
 	const parts = [];
 	if (movie.rt_tomatometer_status && movie.rt_tomatometer_score) {
 		const icon = getTomatometerIcon(movie.rt_tomatometer_status);
-		parts.push(`${icon} ${movie.rt_tomatometer_score}%`);
+		const scoreDisplay = movie.rt_tomatometer_score === '-' ? '-' : `${movie.rt_tomatometer_score}%`;
+		parts.push(`${icon} ${scoreDisplay}`);
 	}
 	if (movie.rt_popcornmeter_status && movie.rt_popcornmeter_score) {
 		const icon = getPopcornmeterIcon(movie.rt_popcornmeter_status);
-		parts.push(`${icon} ${movie.rt_popcornmeter_score}%`);
+		const scoreDisplay = movie.rt_popcornmeter_score === '-' ? '-' : `${movie.rt_popcornmeter_score}%`;
+		parts.push(`${icon} ${scoreDisplay}`);
 	}
 	if (parts.length === 0) {
 		return `\n<${movie.rt_url}|Rotten Tomatoes>`;
@@ -166,6 +168,8 @@ function getTomatometerIcon(status) {
 			return ':rotten-tomatoes-fresh-tomato:';
 		case 'certified-fresh':
 			return ':rotten-tomatoes-certified-fresh:';
+		case 'none':
+			return ':rotten-tomatoes-gray-tomato:';
 		default:
 			return '';
 	}
@@ -179,6 +183,8 @@ function getPopcornmeterIcon(status) {
 			return ':rotten-tomatoes-hot-popcorn:';
 		case 'verified-hot':
 			return ':rotten-tomatoes-verified-hot:';
+		case 'none':
+			return ':rotten-tomatoes-gray-popcorn:';
 		default:
 			return '';
 	}
@@ -306,6 +312,9 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 			const match = criticsText.match(/(\d+)/);
 			if (match) {
 				tomatometerScore = match[1];
+			} else if (criticsText.trim() === '-') {
+				tomatometerScore = '-';
+				tomatometerStatus = 'none';
 			}
 		}
 		
@@ -326,6 +335,9 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 			const match = audienceText.match(/(\d+)/);
 			if (match) {
 				popcornmeterScore = match[1];
+			} else if (audienceText.trim() === '-') {
+				popcornmeterScore = '-';
+				popcornmeterStatus = 'none';
 			}
 		}
 
@@ -408,8 +420,11 @@ async function promptForMovieData(boxOfficeWinner) {
 	if (!tomatometerStatus) {
 		tomatometerStatus = promptForChoice(
 			`Select the Rotten Tomatoes TOMATOMETER status for ${boxOfficeWinner.title}:`,
-			['rotten', 'fresh', 'certified-fresh']
+			['rotten', 'fresh', 'certified-fresh', 'none']
 		);
+	}
+	if (tomatometerStatus === 'none') {
+		tomatometerScore = '-';
 	}
 	if (!popcornmeterScore) {
 		popcornmeterScore = prompt(`Enter the Rotten Tomatoes POPCORNMETER score (audience %) for ${boxOfficeWinner.title}: `);
@@ -417,8 +432,11 @@ async function promptForMovieData(boxOfficeWinner) {
 	if (!popcornmeterStatus) {
 		popcornmeterStatus = promptForChoice(
 			`Select the Rotten Tomatoes POPCORNMETER status for ${boxOfficeWinner.title}:`,
-			['stale', 'hot', 'verified-hot']
+			['stale', 'hot', 'verified-hot', 'none']
 		);
+	}
+	if (popcornmeterStatus === 'none') {
+		popcornmeterScore = '-';
 	}
 	return {
 		title: boxOfficeWinner.title,
