@@ -284,16 +284,16 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 		});
 		const html = response.data;
 		const $ = cheerio.load(html);
-		
+
 		// Most relevant score elements live inside <media-scorecard>.
 		const scorecard = $('media-scorecard').first();
 		const scope = scorecard && scorecard.length ? scorecard : $.root();
-		
+
 		let tomatometerScore = null;
 		let tomatometerStatus = null;
 		let popcornmeterScore = null;
 		let popcornmeterStatus = null;
-		
+
 		// Preferred approach: use dedicated score-icon and rt-text elements.
 		const criticsIcon = scope.find('score-icon-critics').first();
 		if (criticsIcon && criticsIcon.length) {
@@ -307,7 +307,7 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 				tomatometerStatus = 'fresh';
 			}
 		}
-		const criticsText = scope.find('rt-text[slot="criticsScore"], rt-text[slot^="criticsScore"]').first().text();
+		const criticsText = scope.find('rt-text[slot="critics-score"], rt-text[slot="criticsScore"]').first().text();
 		if (criticsText) {
 			const match = criticsText.match(/(\d+)/);
 			if (match) {
@@ -317,7 +317,7 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 				tomatometerStatus = 'none';
 			}
 		}
-		
+
 		const audienceIcon = scope.find('score-icon-audience').first();
 		if (audienceIcon && audienceIcon.length) {
 			const sentiment = (audienceIcon.attr('sentiment') || '').toUpperCase();
@@ -330,7 +330,7 @@ async function scrapeRottenTomatoesScores(rtUrl) {
 				popcornmeterStatus = 'hot';
 			}
 		}
-		const audienceText = scope.find('rt-text[slot="audienceScore"], rt-text[slot^="audienceScore"]').first().text();
+		const audienceText = scope.find('rt-text[slot="audience-score"], rt-text[slot="audienceScore"]').first().text();
 		if (audienceText) {
 			const match = audienceText.match(/(\d+)/);
 			if (match) {
