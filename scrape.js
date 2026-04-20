@@ -2,6 +2,7 @@ const axios = require('axios'); // legacy way
 const c = require('ansi-colors');
 const fs = require("fs");
 const { parse } = require("csv-parse");
+const { stringify } = require("csv-stringify/sync");
 const path = require('path');
 const cheerio = require('cheerio')
 const { DateTime } = require('luxon');
@@ -463,6 +464,6 @@ function saveNewMovieToCsv(movie) {
 		'rt_popcornmeter_status',
 		'release_date',
 	];
-	const csv = headers.map((header) => movie[header]).join(',') + '\n';
+	const csv = stringify([headers.map((header) => movie[header])]);
 	fs.appendFileSync(MOVIES_CSV_PATH, csv);
 }
