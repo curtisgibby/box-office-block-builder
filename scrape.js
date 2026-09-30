@@ -11,6 +11,17 @@ const prompt = require('prompt-sync')();
 const { MovieDb } = require('moviedb-promise');
 const { spawn } = require('child_process');
 const MOVIES_CSV_PATH = path.join(process.cwd(), 'movies.csv');
+const MOVIES_CSV_HEADERS = [
+	'title',
+	'imdb_id',
+	'image_url',
+	'rt_url',
+	'rt_tomatometer_score',
+	'rt_tomatometer_status',
+	'rt_popcornmeter_score',
+	'rt_popcornmeter_status',
+	'release_date',
+];
 
 let config = {};
 try {
@@ -63,6 +74,10 @@ function parseHtml(html) {
 }
 
 function getMoviesFromCsv(boxOfficeWinners) {
+	if (!fs.existsSync(MOVIES_CSV_PATH)) {
+		fs.writeFileSync(MOVIES_CSV_PATH, stringify([MOVIES_CSV_HEADERS]));
+		console.log(c.yellow('Created'), c.white(`${MOVIES_CSV_PATH} (no saved movies yet)`));
+	}
 	const movies = [];
 	fs.createReadStream(MOVIES_CSV_PATH)
 		.pipe(parse({ columns: true, relax_column_count: true }))
@@ -467,17 +482,6 @@ async function promptForMovieData(boxOfficeWinner) {
 }
 
 function saveNewMovieToCsv(movie) {
-	const headers = [
-		'title',
-		'imdb_id',
-		'image_url',
-		'rt_url',
-		'rt_tomatometer_score',
-		'rt_tomatometer_status',
-		'rt_popcornmeter_score',
-		'rt_popcornmeter_status',
-		'release_date',
-	];
-	const csv = stringify([headers.map((header) => movie[header])]);
+	const csv = stringify([MOVIES_CSV_HEADERS.map((header) => movie[header])]);
 	fs.appendFileSync(MOVIES_CSV_PATH, csv);
 }
