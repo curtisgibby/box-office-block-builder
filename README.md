@@ -36,6 +36,8 @@ When it finishes, the script copies a Block Kit payload (`{ "blocks": [...] }`) 
 2. Check the rendered preview on the left. Missing Rotten Tomatoes icons usually mean the custom emoji aren't installed (see [Slack emoji](#slack-emoji)).
 3. Click **Preview in Slack**, choose the channel to post to (e.g. `#motion-pictures`), and click **Send**.
 
+![Slack Block Kit builder pre-filled](images/slack-block-kit-builder-filled.png)
+
 ## TMDB integration
 
 If you add a [TMDB API key](https://www.themoviedb.org/settings/api) to `config.json` as `tmdbApiKey`, the script looks up IMDb IDs and poster images using The Movie Database. When it's set, the script will:
@@ -51,7 +53,7 @@ If TMDB is not configured or a lookup fails, the script falls back to manual pro
 The script uses custom Slack emoji for Rotten Tomatoes scores. To add them to your Slack workspace:
 
 1. Go to **Customize Workspace** > **Emoji** (or visit `https://<your-workspace>.slack.com/customize/emoji`).
-2. Click **Add Emoji** and upload each image from the `images/` directory, using the filename (without the `.png` extension) as the emoji name.
+2. Click **Add Emoji** and upload each emoji image from the `images/` directory, using the filename (without the `.png` extension) as the emoji name.
 
 ### Critics (Tomatometer)
 
