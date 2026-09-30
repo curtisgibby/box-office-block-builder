@@ -14,6 +14,15 @@ npm install
 node scrape.js
 ```
 
+When it finishes, the script copies a Block Kit payload (`{ "blocks": [...] }`) to your clipboard.
+
+### Posting to Slack
+
+1. Open the [Block Kit Builder](https://app.slack.com/block-kit-builder) and click the the `Builder` top nav item.
+2. Select everything in the JSON editor on the right and replace it with the clipboard contents.
+3. Check the rendered preview on the left. Missing Rotten Tomatoes icons usually mean the custom emoji aren't installed (see [Slack emoji](#slack-emoji)).
+4. Click **Preview in Slack**, choose the channel to post to (e.g. `#motion-pictures`), and click **Send**.
+
 ## TMDB integration
 
 If you provide a [TMDB API key](https://www.themoviedb.org/settings/api), the script can automatically look up IMDb IDs and poster images using The Movie Database.
@@ -46,7 +55,7 @@ The script uses custom Slack emoji for Rotten Tomatoes scores. To add them to yo
 ### Critics (Tomatometer)
 
 | Status | Icon | Emoji name |
-|--------|------|------------|
+| -------- | ------ | ------------ |
 | Certified Fresh | ![Certified Fresh](images/rotten-tomatoes-certified-fresh.png) | `:rotten-tomatoes-certified-fresh:` |
 | Fresh | ![Fresh](images/rotten-tomatoes-fresh-tomato.png) | `:rotten-tomatoes-fresh-tomato:` |
 | Rotten | ![Rotten](images/rotten-tomatoes-rotten-splat.png) | `:rotten-tomatoes-rotten-splat:` |
@@ -55,7 +64,7 @@ The script uses custom Slack emoji for Rotten Tomatoes scores. To add them to yo
 ### Audience (Popcornmeter)
 
 | Status | Icon | Emoji name |
-|--------|------|------------|
+| -------- | ------ | ------------ |
 | Verified Hot | ![Verified Hot](images/rotten-tomatoes-verified-hot.png) | `:rotten-tomatoes-verified-hot:` |
 | Hot | ![Hot](images/rotten-tomatoes-hot-popcorn.png) | `:rotten-tomatoes-hot-popcorn:` |
 | Stale | ![Stale](images/rotten-tomatoes-stale-popcorn.png) | `:rotten-tomatoes-stale-popcorn:` |
