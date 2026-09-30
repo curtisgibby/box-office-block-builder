@@ -80,4 +80,5 @@ Getting data from Box Office Mojo: https://www.boxofficemojo.com/weekend/2024W40
 Got data
 Got weekend box office winners
 Data copied to clipboard
+Opened Block Kit Builder with blocks preloaded
 ```
