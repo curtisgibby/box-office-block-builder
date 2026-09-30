@@ -12,14 +12,16 @@ const { MovieDb } = require('moviedb-promise');
 const { spawn } = require('child_process');
 const MOVIES_CSV_PATH = path.join(process.cwd(), 'movies.csv');
 
-let moviedb = null;
+let config = {};
 try {
-	const tmdbConfig = require('./tmdb-config.json');
-	if (tmdbConfig && tmdbConfig.apiKey) {
-		moviedb = new MovieDb(tmdbConfig.apiKey);
-	}
+	config = require('./config.json');
 } catch (error) {
-	console.log(c.yellow('Warning:'), c.white('TMDB integration disabled. Check tmdb-config.json and moviedb-promise installation.'));
+	console.log(c.yellow('Warning:'), c.white('No config.json found. TMDB lookups and Block Kit Builder preloading are disabled.'));
+}
+
+let moviedb = null;
+if (config.tmdbApiKey) {
+	moviedb = new MovieDb(config.tmdbApiKey);
 }
 
 const sunday = DateTime.now().minus({ weeks: 1}).endOf('week');
@@ -118,8 +120,20 @@ function formatOutputDataForSlack(outputData) {
 			"emoji": true
 		}
 	});
-	ncp.copy(JSON.stringify({ blocks }));
+	const payload = JSON.stringify({ blocks });
+	ncp.copy(payload);
 	console.log(c.green('Data copied to clipboard'));
+	openBlockKitBuilder(payload);
+}
+
+function openBlockKitBuilder(payload) {
+	if (!config.slackTeamId) {
+		console.log(c.yellow('Tip:'), c.white('Set slackTeamId in config.json to open the Block Kit Builder with these blocks preloaded.'));
+		openUrlInBrowser('https://app.slack.com/block-kit-builder');
+		return;
+	}
+	openUrlInBrowser(`https://app.slack.com/block-kit-builder/${config.slackTeamId}/builder#${encodeURIComponent(payload)}`);
+	console.log(c.green('Opened Block Kit Builder with blocks preloaded'));
 }
 
 function getRankIcon(rank) {
